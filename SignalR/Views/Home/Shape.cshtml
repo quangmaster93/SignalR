@@ -1,0 +1,50 @@
+﻿
+@{
+    ViewBag.Title = "Shape";
+}
+@section Stylesheet{
+
+    <style>
+        #shape {
+            width: 100px;
+            height: 100px;
+            background-color: #FF0000;
+        }
+    </style>
+}
+
+<div id="shape" />
+
+@section scripts{
+    <script src="~/Scripts/jquery-ui-1.12.1.min.js"></script>
+    <script src="~/Scripts/jquery.signalR-2.3.0.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+    <script>
+        $(function () {
+            var moveShapeHub = $.connection.moveShapeHub,
+                $shape = $("#shape"),
+                shapeModel = {
+                    left: 0,
+                    top: 0
+                };
+            moveShapeHub.client.updateShape = function (model) {
+                debugger;
+                shapeModel = model;
+                $shape.offset({ top: shapeModel.top, left: shapeModel.left });
+            };
+            $.connection.hub.start().done(function () {
+                var delayTimer;
+                $shape.draggable({
+                    drag: function () {
+                        shapeModel = $shape.offset();
+                        clearTimeout(delayTimer);
+                        delayTimer = setTimeout(function () {
+                            moveShapeHub.server.updateModel(shapeModel);
+                        }, 2000);
+                        
+                    }
+                });
+            });
+        });
+    </script>
+}
