@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
+using SignalR.Entities;
 
 namespace SignalR.Models
 {
@@ -25,9 +26,14 @@ namespace SignalR.Models
         {
         }
 
+        
         public static ApplicationDbContext Create()
         {
             return new ApplicationDbContext();
         }
+
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<Message> Messages { get; set; }
+        public DbSet<UserConversation> UserConversations { get; set; }
     }
 }
