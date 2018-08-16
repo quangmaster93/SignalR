@@ -17,7 +17,7 @@ namespace SignalR.Hubs
         public readonly ApplicationDbContext _context;
         public GroupChatHub()
         {
-            _context = Context.Request.GetHttpContext().GetOwinContext().Get<ApplicationDbContext>();
+            _context = new ApplicationDbContext();
         }
         static List<Connection> connection = new List<Connection>();
         public override Task OnConnected()
@@ -30,6 +30,7 @@ namespace SignalR.Hubs
                 UserId = userId,
                 ConnectionId = connectionId
             });
+
             var listConversationIds = _context.UserConversations.Where(u => u.UserId == userId).Select(u => u.ConversationId).ToList();
             foreach (var item in listConversationIds)
             {
@@ -49,18 +50,20 @@ namespace SignalR.Hubs
             return base.OnDisconnected(stopCalled);
         }
 
-        public async Task SendMessage(string userIdPar, string message, string conCode)
+        public async Task SendMessage(string userIdPar, string message, string conId)
         {
+            try
+            {          
             var loginUserId= Context.User.Identity.GetUserId();
-            var isInit = _context.Conversations.Any(c=>c.ConCode== conCode);
+            var isInit = _context.Conversations.Any(c=>c.Id == conId);
             if (!isInit)
             {
                 var con = new Conversation()
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    Name = $"{loginUserId}-{userIdPar}",
+                    Id = conId,
+                    Name = $"{loginUserId}_{userIdPar}",
                     StartTime = DateTime.Now,
-                    CreatedBy= loginUserId
+                    CreatedBy= loginUserId,
                 };
                 var savedCon= _context.Conversations.Add(con);
                 var mes = new Message()
@@ -72,12 +75,18 @@ namespace SignalR.Hubs
                     SentUserId= loginUserId
                 };
                 var savedMes = _context.Messages.Add(mes);
-                var savedUserConversation = _context.UserConversations.Add(new UserConversation() {
+                var savedUserConversation = _context.UserConversations.AddRange(new List<UserConversation>(){ new UserConversation() {
                     ConversationId=savedCon.Id,
                     UserId=loginUserId,
                     JoinedTime=DateTime.Now
+                },
+                new UserConversation() {
+                    ConversationId=savedCon.Id,
+                    UserId=userIdPar,
+                    JoinedTime=DateTime.Now
+                }
                 });
-
+                await _context.SaveChangesAsync();
                 await Groups.Add(Context.ConnectionId, savedCon.Id);
                 var connectionIdOfUserPar = connection.FirstOrDefault(c=>c.UserId==userIdPar)?.ConnectionId;
                 if (connectionIdOfUserPar!=null)
@@ -93,15 +102,11 @@ namespace SignalR.Hubs
                     Content = savedMes.Content,
                     SentUserId = savedMes.SentUserId,
                     SentUserName = sentUserName ?? "noname",
-                    ConCode=conCode
                 };
                 Clients.OthersInGroup(savedCon.Id).getMessage(messageModel);
             }
             else
             {
-                var conId = _context.Conversations.FirstOrDefault(c => c.ConCode == conCode)?.Id;
-                if (conId!=null)
-                {
                     var mes = new Message()
                     {
                         Id = Guid.NewGuid().ToString(),
@@ -111,6 +116,7 @@ namespace SignalR.Hubs
                         SentUserId = loginUserId
                     };
                     var savedMes = _context.Messages.Add(mes);
+                    await _context.SaveChangesAsync();
                     var sentUserName = _context.Users.FirstOrDefault(u => u.Id == loginUserId)?.UserName;
                     var messageModel = new MessageModel()
                     {
@@ -119,12 +125,16 @@ namespace SignalR.Hubs
                         Content = savedMes.Content,
                         SentUserId = savedMes.SentUserId,
                         SentUserName = sentUserName ?? "noname",
-                        ConCode = conCode
                     };
                     Clients.OthersInGroup(conId).getMessage(messageModel);
-                }                
+                                
             }
-           
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
         }
     }
     public class Connection{
@@ -139,7 +149,6 @@ namespace SignalR.Hubs
         public string SentUserId { get; set; }
         public string Content { get; set; }
         public string SentUserName { get; set; }
-        public string ConCode { get; set; }
     }
 
 }

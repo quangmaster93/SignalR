@@ -1,4 +1,5 @@
-﻿using SignalR.Models;
+﻿using SignalR.Entities;
+using SignalR.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;

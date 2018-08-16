@@ -143,27 +143,31 @@
             var userId=@Html.Raw(Json.Encode(userId));
             var groupChatHub = $.connection.groupChatHub;
             groupChatHub.client.getOnlineUsers = function (userIds) {
-                //debugger;
+                debugger;
                 $('li.user .status').css("background-color", "#757b75");
                 userIds.forEach((item, index) => {
                     $(`li.user[data-id=${item}] .status`).css("background-color", "green");
                 });
             };
             groupChatHub.client.getMessage = function (model) {
-                var isHaveTab = $(`.liTab[data-con=${conversationCode}]`).length > 0;
-            };
-            startHub();
-
-            //declare
-            var startHub = $.connection.hub.start()
-                .done(function () {
-                    $("li.user").on("dblclick", (e) => {
-                        var conversationCode = createGuid();
-                        var userIdPar = $(e.currentTarget).data("id");
-                        if (userId != userIdPar && $(`div#${userIdPar}`).length == 0) {
-                            var userNamePar = $(e.currentTarget).children(".user-name").text();
-                            var liTab = `<li class="active liTab" data-con=${conversationCode} data-id=${userIdPar}><a data-toggle="tab" href="#${conversationCode}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
-                            var divContent = `<div id="${conversationCode}" data-con=${conversationCode} data-id=${userIdPar} class="tab-pane fade in active divContent" style="height: 100%;">
+                debugger;
+                var isHaveTab = $(`.divContent[data-con=${model.ConversationId}]`).length > 0;
+                if (isHaveTab) {
+                    var html = `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
+                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);
+                    //$(`.liTab[data-con=${model.ConversationId}]`)
+                }
+                else {
+                    if ($(`.divContent[data-id=${model.SentUserId}]`).length > 0) {
+                        $(`.divContent[data-id=${model.SentUserId}]`).attr("data-con", `${model.ConversationId}`);
+                        $(`.divContent[data-id=${model.SentUserId}]`).attr("id", `${model.ConversationId}`);
+                        $(`.liTab[data-id=${model.SentUserId}] a`).attr("href", `#${model.ConversationId}`);
+                        $(`.liTab[data-id=${model.SentUserId}]`).attr("data-con", model.ConversationId);
+                    }
+                    else {
+                        var userNamePar = model.SentUserName;
+                        var liTab = `<li class="active liTab" data-con=${model.ConversationId} data-id=${model.SentUserId}><a data-toggle="tab" href="#${model.ConversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
+                        var divContent = `<div id="${model.ConversationId}" data-con=${model.ConversationId} data-id=${model.SentUserId} class="tab-pane fade in active divContent" style="height: 100%;">
                         <div class="participants">
                             <b>Thành viên:</b> ${userName}, ${userNamePar}
                         </div>
@@ -175,16 +179,69 @@
                             </div>
                         </div>
                     </div>`;
-                            $(".nav-tabs").append(liTab);
-                            $(".tab-content").append(divContent);
-                            $(`#${userIdPar} textarea`).focus();
+                        $(".nav-tabs").append(liTab);
+                        $(".tab-content").append(divContent);
+                    }
+                    
+                    var html = `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
+                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);
+                    $(`#${model.SentUserId} textarea`).focus();
+                }
+            };
 
+            var startHub = $.connection.hub.start()
+                .done(function () {
+                    $("li.user").on("dblclick", (e) => {
+                        var userIdPar = $(e.currentTarget).data("id");
+                        if (userId != userIdPar && $(`.liTab[data-id=${userIdPar}]`).length == 0) {
+                            var conName = `${userId}_${userIdPar}`;
+                            $.ajax({
+                                type: "Get",
+                                url: '@Url.Action("CheckExistConversation", "api/GroupChat")' + `?conName=${conName}`,          
+                                success: function (result) {
+                                    debugger;
+                                    if (result == "error") {
+                                        return;
+                                    }
+                                    else {
+                                        var conversationId = "";
+                                        if (result == false) {
+                                            conversationId = createGuid();
+                                        }
+                                        else {
+                                            conversationId = result
+                                        }
+                                        var userNamePar = $(e.currentTarget).children(".user-name").text();
+                                        var liTab = `<li class="active liTab" data-con=${conversationId} data-id=${userIdPar}><a data-toggle="tab" href="#${conversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
+                                        var divContent = `<div id="${conversationId}" data-con=${conversationId} data-id=${userIdPar} class="tab-pane fade in active divContent" style="height: 100%;">
+                                                        <div class="participants">
+                                                            <b>Thành viên:</b> ${userName}, ${userNamePar}
+                                                        </div>
+                                                        <div class="conversation-body">
+                                                            <div class="messages-area"></div>
+                                                            <div class="chat-area">
+                                                                <textarea>
+                                                                </textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>`;
+                                        $(".nav-tabs").append(liTab);
+                                        $(".tab-content").append(divContent);
+                                        $(`.divContent#${conversationId} textarea`).focus();                                        
+                                    }
+                                },
+                                error: function (jqXHR, textStatus, errorThrown) {
+                                    debugger;
+                                    return;
+                                }
+                            });
                         }
                         else {
-                            return;
+                            return
                         }
-                        //debugger;
                     });
+
+                    
 
                     $(document).on("click", ".delete-tab", (e) => {
                         var target = $(e.currentTarget);
@@ -198,11 +255,11 @@
                             e.preventDefault;
                             var message = $(e.currentTarget).val();
                             var userIdPar = $(e.currentTarget).closest(".divContent").data("id");
-                            var conCode = $(e.currentTarget).closest(".divContent").data("con");
+                            var conId = $(e.currentTarget).closest(".divContent").data("con");
                             var html = `<p><b style="color: #433bb9;">${userName}: </b><span>${message}</span></p>`;
                             $(e.currentTarget).closest(".conversation-body").children(".messages-area").append(html);
                             $(e.currentTarget).val("");
-                            groupChatHub.server.sendMessage(userIdPar, message, conCode);
+                            groupChatHub.server.sendMessage(userIdPar, message, conId);
                         }
                     });
                 })
