@@ -1,4 +1,5 @@
-﻿using SignalR.Entities;
+﻿using Microsoft.AspNet.Identity;
+using SignalR.Entities;
 using SignalR.Models;
 using System;
 using System.Collections.Generic;
@@ -28,17 +29,21 @@ namespace SignalR.Controllers
 
         public ActionResult Index()
         {
+            var loginUserId = User.Identity.GetUserId();
             var context = new ApplicationDbContext();
             var model = new List<UserModel>();
             foreach (var item in context.Users)
             {
-                var user = new UserModel() {
-                    UserId=item.Id,
-                    UserName=item.UserName
-                };
-                model.Add(user);
+                if (item.Id!= loginUserId)
+                {
+                    var user = new UserModel()
+                    {
+                        UserId = item.Id,
+                        UserName = item.UserName
+                    };
+                    model.Add(user);
+                }               
             }
-                
             return View(model);
         }
 

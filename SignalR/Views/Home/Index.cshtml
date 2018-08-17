@@ -150,11 +150,10 @@
                 });
             };
             groupChatHub.client.getMessage = function (model) {
-                debugger;
                 var isHaveTab = $(`.divContent[data-con=${model.ConversationId}]`).length > 0;
                 if (isHaveTab) {
                     var html = `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
-                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);
+                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);                    
                     //$(`.liTab[data-con=${model.ConversationId}]`)
                 }
                 else {
@@ -166,8 +165,8 @@
                     }
                     else {
                         var userNamePar = model.SentUserName;
-                        var liTab = `<li class="active liTab" data-con=${model.ConversationId} data-id=${model.SentUserId}><a data-toggle="tab" href="#${model.ConversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
-                        var divContent = `<div id="${model.ConversationId}" data-con=${model.ConversationId} data-id=${model.SentUserId} class="tab-pane fade in active divContent" style="height: 100%;">
+                        var liTab = `<li class="liTab" data-con=${model.ConversationId} data-id=${model.SentUserId}><a data-toggle="tab" href="#${model.ConversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
+                        var divContent = `<div id="${model.ConversationId}" data-con=${model.ConversationId} data-id=${model.SentUserId} class="tab-pane fade divContent" style="height: 100%;">
                         <div class="participants">
                             <b>Thành viên:</b> ${userName}, ${userNamePar}
                         </div>
@@ -181,6 +180,7 @@
                     </div>`;
                         $(".nav-tabs").append(liTab);
                         $(".tab-content").append(divContent);
+                        $(`.liTab[data-id=${model.SentUserId}] a`).tab('show');
                     }
                     
                     var html = `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
@@ -193,7 +193,10 @@
                 .done(function () {
                     $("li.user").on("dblclick", (e) => {
                         var userIdPar = $(e.currentTarget).data("id");
-                        if (userId != userIdPar && $(`.liTab[data-id=${userIdPar}]`).length == 0) {
+                        if (userId == userIdPar) {
+                            return;
+                        } 
+                        if ($(`.liTab[data-id=${userIdPar}]`).length == 0) {
                             var conName = `${userId}_${userIdPar}`;
                             $.ajax({
                                 type: "Get",
@@ -212,8 +215,8 @@
                                             conversationId = result
                                         }
                                         var userNamePar = $(e.currentTarget).children(".user-name").text();
-                                        var liTab = `<li class="active liTab" data-con=${conversationId} data-id=${userIdPar}><a data-toggle="tab" href="#${conversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
-                                        var divContent = `<div id="${conversationId}" data-con=${conversationId} data-id=${userIdPar} class="tab-pane fade in active divContent" style="height: 100%;">
+                                        var liTab = `<li class="liTab" data-con=${conversationId} data-id=${userIdPar}><a data-toggle="tab" href="#${conversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
+                                        var divContent = `<div id="${conversationId}" data-con=${conversationId} data-id=${userIdPar} class="tab-pane fade divContent" style="height: 100%;">
                                                         <div class="participants">
                                                             <b>Thành viên:</b> ${userName}, ${userNamePar}
                                                         </div>
@@ -227,6 +230,7 @@
                                                     </div>`;
                                         $(".nav-tabs").append(liTab);
                                         $(".tab-content").append(divContent);
+                                        $(`.liTab[data-con=${conversationId}] a`).tab('show');
                                         $(`.divContent#${conversationId} textarea`).focus();                                        
                                     }
                                 },
@@ -235,10 +239,10 @@
                                     return;
                                 }
                             });
-                        }
-                        else {
-                            return
-                        }
+                    }
+                    else {
+                            $(`.liTab[data-id=${userIdPar}] a`).tab('show');
+                    }
                     });
 
                     
