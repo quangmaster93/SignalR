@@ -28,15 +28,16 @@ namespace SignalR.Controllers.api
                 var conversation = _context.Conversations.FirstOrDefault(c => c.Name == conName);
                 if (conversation!=null)
                 {
-                    return Json(conversation.Id);
+                    var model = ConversationModel.Create(_context, conversation.Id);
+                    return Json(model);
                 }
                 var newConName = String.Join("_",conName.Split('_').Reverse());
                 var newConversation = _context.Conversations.FirstOrDefault(c => c.Name == newConName);
                 if (newConversation != null)
                 {
-                    return Json(newConversation.Id);
+                    var model = ConversationModel.Create(_context, conversation.Id);
+                    return Json(model);
                 }
-
                 return Json(false);
 
             }
@@ -45,5 +46,37 @@ namespace SignalR.Controllers.api
                 return Json("error");
             }
         }
+    }
+    public class ConversationModel
+    {
+        public ConversationModel()
+        {
+            Messages = new List<MessageModel>();
+        }
+        public string ConversationId { get; set; }
+        public List<MessageModel> Messages { get; set; }
+
+        public static ConversationModel Create(ApplicationDbContext _context, string conversationId )
+        {
+            var model = new ConversationModel();
+            model.ConversationId = conversationId;
+            model.Messages = _context.Messages.Where(m => m.ConversationId == conversationId).OrderBy(m => m.SendTime).Take(100).ToList().Select(m =>
+            {
+                var message = new MessageModel();
+                message.Id = m.Id;
+                message.Content = m.Content;
+                message.SentUserId = m.SentUserId;
+                message.SentUserName = _context.Users.FirstOrDefault(u => u.Id == m.SentUserId)?.UserName;
+                return message;
+            }).ToList();
+            return model;
+        }
+    }
+    public class MessageModel
+    {
+        public string Id { get; set; }
+        public string SentUserId { get; set; }
+        public string SentUserName { get; set; }
+        public string Content { get; set; }
     }
 }

@@ -212,7 +212,7 @@
                                             conversationId = createGuid();
                                         }
                                         else {
-                                            conversationId = result
+                                            conversationId = result.ConversationId
                                         }
                                         var userNamePar = $(e.currentTarget).children(".user-name").text();
                                         var liTab = `<li class="liTab" data-con=${conversationId} data-id=${userIdPar}><a data-toggle="tab" href="#${conversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
@@ -223,7 +223,7 @@
                                                         <div class="conversation-body">
                                                             <div class="messages-area"></div>
                                                             <div class="chat-area">
-                                                                <textarea>
+                                                                <textarea class="form-control">
                                                                 </textarea>
                                                             </div>
                                                         </div>
@@ -231,7 +231,11 @@
                                         $(".nav-tabs").append(liTab);
                                         $(".tab-content").append(divContent);
                                         $(`.liTab[data-con=${conversationId}] a`).tab('show');
-                                        $(`.divContent#${conversationId} textarea`).focus();                                        
+                                        $(`.divContent#${conversationId} textarea`).focus();
+                                        if (result != false) {
+                                            
+                                        }                                          
+
                                     }
                                 },
                                 error: function (jqXHR, textStatus, errorThrown) {
