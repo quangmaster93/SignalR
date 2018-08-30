@@ -35,7 +35,7 @@ namespace SignalR.Controllers.api
                 var newConversation = _context.Conversations.FirstOrDefault(c => c.Name == newConName);
                 if (newConversation != null)
                 {
-                    var model = ConversationModel.Create(_context, conversation.Id);
+                    var model = ConversationModel.Create(_context, newConversation.Id);
                     return Json(model);
                 }
                 return Json(false);
@@ -46,6 +46,28 @@ namespace SignalR.Controllers.api
                 return Json("error");
             }
         }
+
+        [HttpGet]
+        public IHttpActionResult GetOldMessagesByConversationId(string conId)
+        {
+            try
+            {
+                var loginUserId = User.Identity.GetUserId();
+                var conversation = _context.Conversations.FirstOrDefault(c => c.Id == conId);
+                if (conversation != null)
+                {
+                    var model = new ConversationModel();
+                    model = ConversationModel.Create(_context, conversation.Id);
+                    return Json(model);
+                }               
+                return Json(false);
+            }
+            catch (Exception ex)
+            {
+                return Json("error");
+            }
+        }
+
     }
     public class ConversationModel
     {
@@ -55,12 +77,11 @@ namespace SignalR.Controllers.api
         }
         public string ConversationId { get; set; }
         public List<MessageModel> Messages { get; set; }
-
         public static ConversationModel Create(ApplicationDbContext _context, string conversationId )
         {
             var model = new ConversationModel();
             model.ConversationId = conversationId;
-            model.Messages = _context.Messages.Where(m => m.ConversationId == conversationId).OrderBy(m => m.SendTime).Take(100).ToList().Select(m =>
+            model.Messages = _context.Messages.Where(m => m.ConversationId == conversationId).OrderByDescending(m => m.SendTime).Take(100).ToList().Select(m =>
             {
                 var message = new MessageModel();
                 message.Id = m.Id;
@@ -68,7 +89,7 @@ namespace SignalR.Controllers.api
                 message.SentUserId = m.SentUserId;
                 message.SentUserName = _context.Users.FirstOrDefault(u => u.Id == m.SentUserId)?.UserName;
                 return message;
-            }).ToList();
+            }).Reverse().ToList();
             return model;
         }
     }

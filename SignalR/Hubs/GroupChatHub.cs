@@ -93,7 +93,6 @@ namespace SignalR.Hubs
                 {
                     await Groups.Add(connectionIdOfUserPar, savedCon.Id);
                 }
-                await Groups.Add(Context.ConnectionId, savedCon.Id);
                 var sentUserName = _context.Users.FirstOrDefault(u => u.Id == loginUserId)?.UserName;
                 var messageModel = new MessageModel()
                 {

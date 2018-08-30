@@ -7,7 +7,7 @@
     var userId = User.Identity.GetUserId();
 }
 @section Stylesheet{
-    <style>
+<style>
         .wraper {
             background-color: antiquewhite;
             width: 100%;
@@ -94,6 +94,23 @@
             color: #b54242;
             cursor: pointer;
         }
+        @@keyframes new-message {
+            from {
+                color: red;
+            }
+
+            to {
+                color: yellow;
+            }
+        }
+        .new-message {
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: new-message 1s infinite;
+            
+        }
         .liTab {
             position: relative;
         }
@@ -104,7 +121,7 @@
             padding: 5px;
             max-width: 100% !important;
         }
-    </style>
+</style>
 }
 <div class="wraper">
     <div class="col-md-4 users">
@@ -143,7 +160,6 @@
             var userId=@Html.Raw(Json.Encode(userId));
             var groupChatHub = $.connection.groupChatHub;
             groupChatHub.client.getOnlineUsers = function (userIds) {
-                debugger;
                 $('li.user .status').css("background-color", "#757b75");
                 userIds.forEach((item, index) => {
                     $(`li.user[data-id=${item}] .status`).css("background-color", "green");
@@ -153,7 +169,10 @@
                 var isHaveTab = $(`.divContent[data-con=${model.ConversationId}]`).length > 0;
                 if (isHaveTab) {
                     var html = `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
-                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);                    
+                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);     
+                    if (!$(`.liTab[data-con=${model.ConversationId}]`).hasClass("active")) {
+                        $(`.liTab[data-con=${model.ConversationId}] .new-message`).removeClass("hidden");
+                    }   
                     //$(`.liTab[data-con=${model.ConversationId}]`)
                 }
                 else {
@@ -165,7 +184,7 @@
                     }
                     else {
                         var userNamePar = model.SentUserName;
-                        var liTab = `<li class="liTab" data-con=${model.ConversationId} data-id=${model.SentUserId}><a data-toggle="tab" href="#${model.ConversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
+                        var liTab = `<li class="liTab" data-con=${model.ConversationId} data-id=${model.SentUserId}><a data-toggle="tab" href="#${model.ConversationId}">${userNamePar}</a><span class="new-message hidden">new</span><span class="delete-tab">x</span></li>`;
                         var divContent = `<div id="${model.ConversationId}" data-con=${model.ConversationId} data-id=${model.SentUserId} class="tab-pane fade divContent" style="height: 100%;">
                         <div class="participants">
                             <b>Thành viên:</b> ${userName}, ${userNamePar}
@@ -181,11 +200,37 @@
                         $(".nav-tabs").append(liTab);
                         $(".tab-content").append(divContent);
                         $(`.liTab[data-id=${model.SentUserId}] a`).tab('show');
-                    }
-                    
-                    var html = `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
-                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);
-                    $(`#${model.SentUserId} textarea`).focus();
+                        $.ajax({
+                            type: "Get",
+                            url: '@Url.Action("GetOldMessagesByConversationId", "api/GroupChat")' + `?conId=${model.ConversationId}`,          
+                            success: function (result) {
+                                if (result == "error") {
+                                }
+                                else {
+                                    var conversationId = model.ConversationId;  
+                                    var html = "";
+                                    if (result != false) {                                       
+                                        result.Messages.forEach((item, index) => {
+                                            if (item.SentUserId == userId) {
+                                                html = html + `<p><b style="color: #433bb9;">${item.SentUserName}: </b><span>${item.Content}</span></p>`;
+                                            }
+                                            else {
+                                                html = html + `<p><b>${item.SentUserName}: </b><span>${item.Content}</span></p>`;
+                                            }                                              
+                                        });
+                                    }     
+                                    //html = html + `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
+                                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);
+                                    $(`#${model.SentUserId} textarea`).focus();
+                                }
+
+                            },
+                            error: function (jqXHR, textStatus, errorThrown) {
+                                debugger;
+                                return;
+                            }
+                        });
+                    }                  
                 }
             };
 
@@ -215,7 +260,7 @@
                                             conversationId = result.ConversationId
                                         }
                                         var userNamePar = $(e.currentTarget).children(".user-name").text();
-                                        var liTab = `<li class="liTab" data-con=${conversationId} data-id=${userIdPar}><a data-toggle="tab" href="#${conversationId}">${userNamePar}</a><span class="delete-tab">x</span></li>`;
+                                        var liTab = `<li class="liTab" data-con=${conversationId} data-id=${userIdPar}><a data-toggle="tab" href="#${conversationId}">${userNamePar}</a><span class="new-message hidden">new</span><span class="delete-tab">x</span></li>`;
                                         var divContent = `<div id="${conversationId}" data-con=${conversationId} data-id=${userIdPar} class="tab-pane fade divContent" style="height: 100%;">
                                                         <div class="participants">
                                                             <b>Thành viên:</b> ${userName}, ${userNamePar}
@@ -233,7 +278,19 @@
                                         $(`.liTab[data-con=${conversationId}] a`).tab('show');
                                         $(`.divContent#${conversationId} textarea`).focus();
                                         if (result != false) {
+                                            var html = "";
+                                            result.Messages.forEach((item, index) => {
+                                                if (item.SentUserId == userId) {
+                                                    html = html + `<p><b style="color: #433bb9;">${item.SentUserName}: </b><span>${item.Content}</span></p>`;
+                                                }
+                                                else {
+                                                    html = html + `<p><b>${item.SentUserName}: </b><span>${item.Content}</span></p>`;
+                                                }                                              
+                                            });
                                             
+                                            let messagesAreaElement = $(`.divContent[data-con=${result.ConversationId}] .messages-area`);
+                                            messagesAreaElement.append(html);
+                                            messagesAreaElement.animate({ scrollTop: messagesAreaElement.height() }, 1000);
                                         }                                          
 
                                     }
@@ -249,7 +306,10 @@
                     }
                     });
 
-                    
+                    $(document).on("click", ".liTab", (e) => {
+                        var target = $(e.currentTarget);
+                        target.children(".new-message").addClass("hidden");
+                    })
 
                     $(document).on("click", ".delete-tab", (e) => {
                         var target = $(e.currentTarget);
@@ -265,7 +325,9 @@
                             var userIdPar = $(e.currentTarget).closest(".divContent").data("id");
                             var conId = $(e.currentTarget).closest(".divContent").data("con");
                             var html = `<p><b style="color: #433bb9;">${userName}: </b><span>${message}</span></p>`;
-                            $(e.currentTarget).closest(".conversation-body").children(".messages-area").append(html);
+                            let messagesAreaElement = $(e.currentTarget).closest(".conversation-body").children(".messages-area");
+                            messagesAreaElement.append(html);
+                            messagesAreaElement.animate({ scrollTop: messagesAreaElement.height() }, 1000);
                             $(e.currentTarget).val("");
                             groupChatHub.server.sendMessage(userIdPar, message, conId);
                         }
