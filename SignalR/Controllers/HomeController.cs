@@ -31,7 +31,7 @@ namespace SignalR.Controllers
         {
             var loginUserId = User.Identity.GetUserId();
             var context = new ApplicationDbContext();
-            var model = new List<UserModel>();
+            var model = new HomeIndexViewModel();
             foreach (var item in context.Users)
             {
                 if (item.Id!= loginUserId)
@@ -39,10 +39,22 @@ namespace SignalR.Controllers
                     var user = new UserModel()
                     {
                         UserId = item.Id,
-                        UserName = item.UserName
+                        UserName = item.UserName.Substring(0, item.UserName.IndexOf('@'))
                     };
-                    model.Add(user);
+                    model.UserModels.Add(user);
                 }               
+            }
+
+            var userCons = context.UserConversations.Where(u => u.UserId == loginUserId).Select(u => u.ConversationId);
+            var groups = context.Conversations.Where(c => c.IsGroup == true && userCons.Contains(c.Id));
+            foreach (var item in groups)
+            {
+                    var group = new GroupModel()
+                    {
+                        Id= item.Id,
+                        Name=item.Name
+                    };
+                    model.GroupModels.Add(group);
             }
             return View(model);
         }

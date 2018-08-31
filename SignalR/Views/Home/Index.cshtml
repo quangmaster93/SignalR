@@ -1,6 +1,6 @@
 ﻿@using SignalR.Models
 @using Microsoft.AspNet.Identity;
-@model List<UserModel>
+@model HomeIndexViewModel
 @{
     ViewBag.Title = "Home Page";
     var userName = User.Identity.Name;
@@ -24,16 +24,22 @@
             height: 50px;
             background-color: #dec6c6;
             display: flex;
-            justify-content: space-around;
+            justify-content: center;
             align-items: center;
+            /*padding-right: 10px;*/
         }
 
         .list-user {
-            height: calc(100% - 100px);
+            height: 100%;
+            padding: 10px;
+            border-right: 1px solid #72dcd247;
+        }
+        .list-group {
+            height: 100%;
             padding: 10px;
         }
 
-        .user {
+        .user,.group {
             cursor: pointer;
         }
 
@@ -48,6 +54,7 @@
             text-transform: uppercase;
             font-weight: 700;
             font-size: 16px;
+            /*text-align:center;*/
         }
 
         .conversation {
@@ -68,7 +75,9 @@
             margin: 10px;
             height: calc(100% - 70px);
         }
-
+        .divContent{
+            position:relative;
+        }
         .group-name {
         }
 
@@ -121,25 +130,52 @@
             padding: 5px;
             max-width: 100% !important;
         }
+        .modal-dialog {
+            margin-top: 200px;
+            width: 350px;
+        }
+        .modal-title{
+            text-align:center;
+        }
+        #add-par{
+            position:absolute;
+        }
+        .users-groups {
+            height: calc(100% - 50px);
+        }
 </style>
 }
 <div class="wraper">
     <div class="col-md-4 users">
-        <div class="header">
-            <span class="title">Thành viên</span>
-            <button class="btn btn-success">Tạo nhóm chat</button>
+        <div class="header">            
+            <button class="btn btn-success" id="create-group" >Tạo nhóm chat</button>
         </div>
-        <div class="list-user">
-            <ul style="list-style-type:none;">
-                @foreach (var item in Model)
-                {
-                    <li class="user" data-id="@item.UserId">
-                        <span class="status"></span>
-                        <span class="user-name">@item.UserName</span>
-                    </li>
-                }
-            </ul>
+        <div class="users-groups">
+            <div class="list-user col-md-6 col-sm-12">
+                <p class="title">Thành viên</p>
+                <ul style="list-style-type:none;padding-left: 5px;">
+                    @foreach (var item in Model.UserModels)
+                    {
+                        <li class="user" data-id="@item.UserId">
+                            <span class="status"></span>
+                            <span class="user-name">@item.UserName</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="list-group col-md-6 col-sm-12">
+                <p class="title">Nhóm</p>
+                <ul style="list-style-type:none; padding-left: 5px;">
+                    @foreach (var item in Model.GroupModels)
+                    {
+                        <li class="group" data-id="@item.Id">
+                            <span class="group-name">@item.Name</span>
+                        </li>
+                    }
+                </ul>
+            </div>
         </div>
+        
     </div>
     <div class="col-md-8 conversation">
         <ul class="nav nav-tabs">
@@ -149,6 +185,29 @@
 
         </div>
     </div>
+
+    <!-- Modal -->
+    <div id="myModal" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Tên nhóm:</h4>
+                </div>
+                <div class="modal-body">
+                    <input type="text" name="name" value="" placeholder="Tên nhóm" class="form-control"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="create-confirm">Tạo</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
 </div>
 @section scripts{
     <script src="~/Scripts/jquery-ui-1.12.1.min.js"></script>
@@ -169,10 +228,10 @@
                 var isHaveTab = $(`.divContent[data-con=${model.ConversationId}]`).length > 0;
                 if (isHaveTab) {
                     var html = `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
-                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);     
+                    $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);
                     if (!$(`.liTab[data-con=${model.ConversationId}]`).hasClass("active")) {
                         $(`.liTab[data-con=${model.ConversationId}] .new-message`).removeClass("hidden");
-                    }   
+                    }
                     //$(`.liTab[data-con=${model.ConversationId}]`)
                 }
                 else {
@@ -202,23 +261,23 @@
                         $(`.liTab[data-id=${model.SentUserId}] a`).tab('show');
                         $.ajax({
                             type: "Get",
-                            url: '@Url.Action("GetOldMessagesByConversationId", "api/GroupChat")' + `?conId=${model.ConversationId}`,          
+                            url: '@Url.Action("GetOldMessagesByConversationId", "api/GroupChat")' + `?conId=${model.ConversationId}`,
                             success: function (result) {
                                 if (result == "error") {
                                 }
                                 else {
-                                    var conversationId = model.ConversationId;  
+                                    var conversationId = model.ConversationId;
                                     var html = "";
-                                    if (result != false) {                                       
+                                    if (result != false) {
                                         result.Messages.forEach((item, index) => {
                                             if (item.SentUserId == userId) {
                                                 html = html + `<p><b style="color: #433bb9;">${item.SentUserName}: </b><span>${item.Content}</span></p>`;
                                             }
                                             else {
                                                 html = html + `<p><b>${item.SentUserName}: </b><span>${item.Content}</span></p>`;
-                                            }                                              
+                                            }
                                         });
-                                    }     
+                                    }
                                     //html = html + `<p><b>${model.SentUserName}: </b><span>${model.Content}</span></p>`;
                                     $(`.divContent[data-con=${model.ConversationId}] .messages-area`).append(html);
                                     $(`#${model.SentUserId} textarea`).focus();
@@ -230,7 +289,7 @@
                                 return;
                             }
                         });
-                    }                  
+                    }
                 }
             };
 
@@ -240,12 +299,12 @@
                         var userIdPar = $(e.currentTarget).data("id");
                         if (userId == userIdPar) {
                             return;
-                        } 
+                        }
                         if ($(`.liTab[data-id=${userIdPar}]`).length == 0) {
                             var conName = `${userId}_${userIdPar}`;
                             $.ajax({
                                 type: "Get",
-                                url: '@Url.Action("CheckExistConversation", "api/GroupChat")' + `?conName=${conName}`,          
+                                url: '@Url.Action("CheckExistConversation", "api/GroupChat")' + `?conName=${conName}`,
                                 success: function (result) {
                                     debugger;
                                     if (result == "error") {
@@ -285,13 +344,13 @@
                                                 }
                                                 else {
                                                     html = html + `<p><b>${item.SentUserName}: </b><span>${item.Content}</span></p>`;
-                                                }                                              
+                                                }
                                             });
-                                            
+
                                             let messagesAreaElement = $(`.divContent[data-con=${result.ConversationId}] .messages-area`);
                                             messagesAreaElement.append(html);
                                             messagesAreaElement.animate({ scrollTop: messagesAreaElement.height() }, 1000);
-                                        }                                          
+                                        }
 
                                     }
                                 },
@@ -304,6 +363,51 @@
                     else {
                             $(`.liTab[data-id=${userIdPar}] a`).tab('show');
                     }
+                    });
+
+                    $("#create-group").click((e) => {
+                        $("#myModal").modal();
+
+                    });
+
+                    $("#create-confirm").click((e) => {
+                        let name = $(".modal-dialog input").val();
+                        $("#myModal").modal("hide");
+                        $.ajax({
+                            type: "Get",
+                            url: '@Url.Action("CreateGroup", "api/GroupChat")' + `?name=${name}`,
+                            success: function (result) {
+                                debugger
+                                if (result == "error") {
+                                    return;
+                                }
+                                var liTab = `<li class="liTab" data-con=${result}><a data-toggle="tab" href="#${result}">${name}</a><span class="new-message hidden">new</span><span class="delete-tab">x</span></li>`;
+                                var divContent = `<div id="${result}" data-con=${result} class="tab-pane fade divContent" style="height: 100%;">
+                                                        <button id="add-par">Thêm mới</button>
+                                                        <div class="participants">
+                                                           <b>Thành viên:</b>
+                                                        </div>
+                                                        <div class="conversation-body">
+                                                            <div class="messages-area"></div>
+                                                            <div class="chat-area">
+                                                                <textarea class="form-control">
+                                                                </textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>`;
+                                $(".nav-tabs").append(liTab);
+                                $(".tab-content").append(divContent);
+                                $(`.liTab[data-con=${result}] a`).tab('show');
+                                $(`.divContent#${result} textarea`).focus();
+                                let groupElement = `<li class="group" data-id="${result}">
+                                                    <span class="group-name">${name}</span>
+                                                </li>`;
+                                $(".list-group ul").prepend(groupElement);
+                            },
+                            error: function (jqXHR, textStatus, errorThrown) {                                
+                                return;
+                            }
+                        });                        
                     });
 
                     $(document).on("click", ".liTab", (e) => {

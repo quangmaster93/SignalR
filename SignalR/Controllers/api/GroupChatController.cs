@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNet.Identity;
+using SignalR.Entities;
 using SignalR.Models;
 using System;
 using System.Collections.Generic;
@@ -61,6 +62,37 @@ namespace SignalR.Controllers.api
                     return Json(model);
                 }               
                 return Json(false);
+            }
+            catch (Exception ex)
+            {
+                return Json("error");
+            }
+        }
+
+        [HttpGet]
+        public IHttpActionResult CreateGroup(string name)
+        {
+            try
+            {
+                var loginUserId = User.Identity.GetUserId();
+                var newCon = new Conversation()
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    CreatedBy = loginUserId,
+                    Name = name,
+                    StartTime = DateTime.Now,
+                    IsGroup = true
+                };
+                var savedCon=_context.Conversations.Add(newCon);
+                var userCon = new UserConversation()
+                {
+                    ConversationId = savedCon.Id,
+                    UserId = loginUserId,
+                    JoinedTime = DateTime.Now
+                };
+                var savedUserCon = _context.UserConversations.Add(userCon);
+                _context.SaveChanges();
+                return Json(savedCon.Id);
             }
             catch (Exception ex)
             {

@@ -11,6 +11,7 @@ namespace SignalR.Entities
         public string Name { get; set; }
         public DateTime StartTime { get; set; }
         public string CreatedBy { get; set; }
+        public bool? IsGroup { get; set; } = false;
         public virtual ICollection<Message> Messages { get; set; }
     }
 }
